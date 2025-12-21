@@ -39,7 +39,7 @@ RUN mkdir -p /app/full \
 FROM ${BASE_CUDA_RUN_CONTAINER} AS base
 
 RUN apt-get update \
-    && apt-get install -y libgomp1 curl\
+    && apt-get install -y libgomp1 curl bash less \
     && apt autoremove -y \
     && apt clean -y \
     && rm -rf /tmp/* /var/tmp/* \
@@ -55,12 +55,13 @@ COPY --from=build /app/full /app
 
 WORKDIR /app
 
+# pip --break-system-packages is only in the pip version in 24.04
 RUN apt-get update \
     && apt-get install -y \
     git \
     python3 \
     python3-pip \
-    && pip install --break-system-packages -r requirements.txt \
+    && python3 -m pip install --break-system-packages -r requirements.txt \
     && apt autoremove -y \
     && apt clean -y \
     && rm -rf /tmp/* /var/tmp/* \
