@@ -1,0 +1,61 @@
+---
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches: [ papamoose/cuda_arm64_docker_build ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        target: [server, full, light]
+        cuda:
+          - version: "12.9.1"
+            tag: "cuda12"
+          - version: "13.1.1"
+            tag: "cuda13"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ matrix.target }}-${{ matrix.cuda.tag }}
+            type=raw,value=latest,enable=${{ matrix.target == 'server' && matrix.cuda.tag == 'cuda12' }}
+            type=sha,prefix=${{ matrix.target }}-${{ matrix.cuda.tag }}-
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:."
+          file: .devops/cuda.Dockerfile
+          target: ${{ matrix.target }}
+          build-args: |
+            UBUNTU_VERSION=24.04
+            CUDA_VERSION=${{ matrix.cuda.version }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
