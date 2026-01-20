@@ -15,15 +15,10 @@ jobs:
     permissions:
       contents: read
       packages: write
-
+    
     strategy:
       matrix:
         target: [server, full, light]
-        cuda:
-          - version: "12.9.1"
-            tag: "cuda12"
-          - version: "13.1.1"
-            tag: "cuda13"
 
     steps:
       - name: Checkout repository
@@ -48,9 +43,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=${{ matrix.target }}-${{ matrix.cuda.tag }}
-            type=raw,value=latest,enable=${{ matrix.target == 'server' && matrix.cuda.tag == 'cuda12' }}
-            type=sha,prefix=${{ matrix.target }}-${{ matrix.cuda.tag }}-
+            type=raw,value=${{ matrix.target }}-cuda12
+            type=raw,value=latest,enable=${{ matrix.target == 'server' }}
+            type=sha,prefix=${{ matrix.target }}-cuda12-
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -61,7 +56,7 @@ jobs:
           platforms: linux/arm64
           build-args: |
             UBUNTU_VERSION=24.04
-            CUDA_VERSION=${{ matrix.cuda.version }}
+            CUDA_VERSION=12.9.1
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
